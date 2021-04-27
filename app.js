@@ -77,6 +77,7 @@ app.get("/token",(req,res)=>{
             console.log(body.data);
             const access_token = body.data.access_token;
             current_token = access_token;
+            console.log("TOKEN SENT")
             res.json({token: current_token});
         })
         .catch((err)=>{
@@ -86,6 +87,29 @@ app.get("/token",(req,res)=>{
         console.log("Error: code not recieved");
     }
 });
+
+
+//api to get user profile
+app.get("/user",(req,res)=>{
+    if(current_token){
+        const options = {
+            method: "GET",
+            headers: { 'Authorization': 'Bearer ' + current_token },
+            url: 'https://api.spotify.com/v1/me',
+        }
+        axios(options).then((response) => {
+            const data = response.data;
+            const info = data.display_name
+            console.log("PROFILE SENT");
+            res.json(info);
+        })
+        .catch((err) => {
+            console.log(err);
+        })
+    }else{
+        console.log("Error: token not generated");
+    }
+})
 
 
 //api call to get top tracks
@@ -112,6 +136,7 @@ app.get("/tracks",(req,res)=>{
             };
             return trackdata;
             });
+            console.log("TRACKS SENT");
             res.json(info);
         })
         .catch((err) => {
@@ -144,6 +169,7 @@ app.get("/artists", (req, res) => {
                 };
                 return artistdata;
             });
+            console.log("ARTISTS SENT");
             res.json(info);
         })
         .catch((err) => {
@@ -181,6 +207,7 @@ app.get("/history",(req,res)=>{
                 return trackdata;
             });
             res.json(info);
+            console.log("HISTORY SENT");
         })
             .catch((err) => {
                 console.log(err);
