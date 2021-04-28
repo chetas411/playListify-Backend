@@ -24,7 +24,7 @@ const redirect_uri = process.env.REDIRECT_URI;
 const base_url_auth = "https://accounts.spotify.com";
 
 // scope for which the access would be provided
-const scope = 'user-read-private user-read-email user-top-read user-read-recently-played';
+const scope = 'user-read-private user-read-email user-top-read user-read-recently-played playlist-modify-public playlist-modify-private';
 
 //variable to store token
 let current_token;
@@ -99,7 +99,10 @@ app.get("/user",(req,res)=>{
         }
         axios(options).then((response) => {
             const data = response.data;
-            const info = data.display_name
+            const info = {
+                display_name: data.display_name,
+                id: data.id
+            }
             console.log("PROFILE SENT");
             res.json(info);
         })
@@ -132,10 +135,12 @@ app.get("/tracks",(req,res)=>{
                     return artist.name;
                 }),
                 name: item.name,
-                preview_url: item.preview_url
+                preview_url: item.preview_url,
+                uri: item.uri
             };
             return trackdata;
             });
+            // console.log(info);
             console.log("TRACKS SENT");
             res.json(info);
         })
@@ -202,11 +207,13 @@ app.get("/history",(req,res)=>{
                     }),
                     name: item.track.name,
                     preview_url: item.track.preview_url,
-                    played_at: item.played_at
+                    played_at: item.played_at,
+                    uri: item.track.uri
                 };
                 return trackdata;
             });
             res.json(info);
+            // console.log(info);
             console.log("HISTORY SENT");
         })
             .catch((err) => {
@@ -216,7 +223,64 @@ app.get("/history",(req,res)=>{
         console.log("Error: token not generated");
     }
 
-})
+});
+
+//api to create playlist(empty)
+app.post("/createplaylist/:user_id/:playlist_name", (req, res) => {
+    if (current_token) {
+        const {user_id,playlist_name} = req.params;
+        const trackURIs = req.body.map((track)=>{
+            return track.uri;
+        });
+        const optionsForPlaylistCreation = {
+            method: "POST",
+            headers: { 
+                'Authorization': 'Bearer ' + current_token ,
+                'Content-Type': 'application/json'
+            },
+            url: `https://api.spotify.com/v1/users/${user_id}/playlists`,
+            data: {
+                name: playlist_name
+            }
+        };
+        axios(optionsForPlaylistCreation)
+        .then((response) => {
+            const data = response.data;
+            const info = {
+                pl_id: data.id,
+                pl_url: data.external_urls.spotify
+            }
+            console.log("PLAYLIST CREATED");
+            const optionsForAddingTracks = {
+                method: "POST",
+                headers: {
+                    'Authorization': 'Bearer ' + current_token,
+                    'Content-Type': 'application/json'
+                },
+                url: `https://api.spotify.com/v1/playlists/${info.pl_id}/tracks`,
+                data: {
+                    uris: trackURIs
+                }
+            }
+            axios(optionsForAddingTracks)
+            .then((response)=>{
+                console.log(response.data);
+                res.json(info);
+            })
+            .catch((err)=>{
+                console.log(err);
+                console.log("Tracks could not be added");
+            })
+            
+        })
+        .catch((err) => {
+            console.log("Play error");
+        })
+    } else {
+        console.log("Error: token not generated");
+    }
+
+});
 
 
 
