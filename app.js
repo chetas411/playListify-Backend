@@ -29,7 +29,8 @@ const scope = 'user-read-private user-read-email user-top-read user-read-recentl
 //variable to store token
 let current_token;
 
-app.get("/",(req,res)=>{
+app.get("/", (req, res) => {
+    //This will print the url to which authorization is to be done.Using this in Client side
     console.log(`${base_url_auth}/authorize?` +
         querystring.stringify({
             response_type: 'code',
@@ -38,11 +39,14 @@ app.get("/",(req,res)=>{
             redirect_uri: redirect_uri,
             show_dialog: true
         }));
-   res.send("You are viewing localhost: 5000")
+    res.send("You are viewing localhost: 5000")
 });
 
+
+
+//THIS LOGIN PART IS BEING DONE IN CLIENT SIDE ONLY (just inluded here for reference)
 // this will authorise the user and will get code back as query parameter
-app.get("/login",(req,res)=>{
+app.get("/login", (req, res) => {
     res.redirect(`${base_url_auth}/authorize?` +
         querystring.stringify({
             response_type: 'code',
@@ -51,14 +55,16 @@ app.get("/login",(req,res)=>{
             redirect_uri: redirect_uri,
             show_dialog: true
         })
-    );    
+    );
 })
 
-// here we extract the code returned as a query parameter in the url and will make a post request
+
+
+// Here we extract the code returned as a query parameter in the url and will make a post request
 // with the provided code to get access_token that will be used to make api requests to spotify
-app.get("/token",(req,res)=>{
+app.get("/token", (req, res) => {
     const code = req.query.code;
-    if(code){
+    if (code) {
         const params = new URLSearchParams({
             "grant_type": "authorization_code",
             "code": code,
@@ -72,26 +78,27 @@ app.get("/token",(req,res)=>{
             }
         };
 
-        axios.post(`${base_url_auth}/api/token`,params,config)
-        .then((body)=>{
-            console.log(body.data);
-            const access_token = body.data.access_token;
-            current_token = access_token;
-            console.log("TOKEN SENT")
-            res.json({token: current_token});
-        })
-        .catch((err)=>{
-            console.log("error");
-        })
-    }else{
-        console.log("Error: code not recieved");
+        axios.post(`${base_url_auth}/api/token`, params, config)
+            .then((body) => {
+                console.log(body.data);
+                const access_token = body.data.access_token;
+                current_token = access_token;
+                console.log("TOKEN SENT")
+                res.json({ token: current_token });
+            })
+            .catch((err) => {
+                console.log("ERROR: Token could not be generated");
+            })
+    } else {
+        console.log("ERROR: Auth code not recieved");
     }
 });
 
 
+
 //api to get user profile
-app.get("/user",(req,res)=>{
-    if(current_token){
+app.get("/user", (req, res) => {
+    if (current_token) {
         const options = {
             method: "GET",
             headers: { 'Authorization': 'Bearer ' + current_token },
@@ -107,17 +114,18 @@ app.get("/user",(req,res)=>{
             res.json(info);
         })
         .catch((err) => {
-            console.log(err);
+             console.log("ERROR: Profile could not be fetched")
         })
-    }else{
-        console.log("Error: token not generated");
+    } else {
+        console.log("ERROR: Calling api before token generation");
     }
 })
 
 
+
 //api call to get top tracks
-app.get("/tracks",(req,res)=>{
-    if(current_token){
+app.get("/tracks", (req, res) => {
+    if (current_token) {
         const options = {
             method: "GET",
             headers: { 'Authorization': 'Bearer ' + current_token },
@@ -129,29 +137,30 @@ app.get("/tracks",(req,res)=>{
         axios(options).then((response) => {
             const data = response.data.items;
             const info = data.map((item) => {
-            const trackdata = {
-                imgUrl: item.album.images[1],
-                information: item.artists.map((artist) => {
-                    return artist.name;
-                }),
-                name: item.name,
-                preview_url: item.preview_url,
-                uri: item.uri
-            };
-            return trackdata;
+                const trackdata = {
+                    imgUrl: item.album.images[1],
+                    information: item.artists.map((artist) => {
+                        return artist.name;
+                    }),
+                    name: item.name,
+                    preview_url: item.preview_url,
+                    uri: item.uri
+                };
+                return trackdata;
             });
-            // console.log(info);
             console.log("TRACKS SENT");
             res.json(info);
         })
         .catch((err) => {
-            console.log(err);
+            console.log("ERROR: Top Tracks could not be fetched");
         })
-    }else{
-        console.log("Error: token not generated");
+    } else {
+        console.log("ERROR: Calling api before token generation");
     }
 
 });
+
+
 
 //api to get top artists
 app.get("/artists", (req, res) => {
@@ -178,17 +187,20 @@ app.get("/artists", (req, res) => {
             console.log("ARTISTS SENT");
             res.json(info);
         })
-        .catch((err) => {
-            console.log(err);
-        })
+            .catch((err) => {
+                console.log("ERROR: Top artists could not be fetched");
+            })
     } else {
-        console.log("Error: token not generated");
+        console.log("ERROR: Calling api before token generation");
     }
 
 });
 
+
+
+
 //api to get list of recently played tracks
-app.get("/history",(req,res)=>{
+app.get("/history", (req, res) => {
     if (current_token) {
         const options = {
             method: "GET",
@@ -203,7 +215,7 @@ app.get("/history",(req,res)=>{
             const info = data.map((item) => {
                 const trackdata = {
                     imgUrl: item.track.album.images[1],
-                    information: item.track.artists.map((artist)=>{
+                    information: item.track.artists.map((artist) => {
                         return artist.name;
                     }),
                     name: item.track.name,
@@ -213,24 +225,26 @@ app.get("/history",(req,res)=>{
                 };
                 return trackdata;
             });
-            res.json(info);
-            // console.log(info);
             console.log("HISTORY SENT");
+            res.json(info);
         })
             .catch((err) => {
-                console.log(err);
+                console.log("ERROR: History could not be fetched");
             })
     } else {
-        console.log("Error: token not generated");
+        console.log("ERROR: Calling api before token generation");
     }
 
 });
 
+
+
+
 //api to get playlist of top tracks by user's top artists
-app.post("/createplaylist/:user_id/Top%20Artists",(req,res)=>{
+app.post("/createplaylist/:user_id/Top%20Artists", (req, res) => {
     if (current_token) {
         const user_id = req.params.user_id;
-        const artistIDs = req.body.map((artist)=>{
+        const artistIDs = req.body.map((artist) => {
             return artist.id;
         });
         const optionsForPlaylistCreation = {
@@ -252,78 +266,76 @@ app.post("/createplaylist/:user_id/Top%20Artists",(req,res)=>{
                     pl_url: data.external_urls.spotify
                 }
                 console.log("PLAYLIST CREATED");
-                // const tracksURIs = [];
-                // console.log(artistIDs);
-                const requests = artistIDs.map((id)=>{
+                const requests = artistIDs.map((id) => {
                     const option = {
                         method: "GET",
                         headers: {
                             'Authorization': 'Bearer ' + current_token,
                         },
-                        url:`https://api.spotify.com/v1/artists/${id}/top-tracks?${querystring.stringify({ market: "IN" })}`
+                        url: `https://api.spotify.com/v1/artists/${id}/top-tracks?${querystring.stringify({ market: "IN" })}`
                     }
                     return axios(option);
                 });
-                // console.log(requests);
                 axios.all(requests)
-                .then((responses)=>{
-                    const tracksURIs = [];
-                    responses.forEach((response)=>{
-                        const tracks = response.data.tracks.slice(1,5)
-                        tracks.forEach((track)=>{
-                            tracksURIs.push(track.uri);
+                    .then((responses) => {
+                        const tracksURIs = [];
+                        responses.forEach((response) => {
+                            const tracks = response.data.tracks.slice(1, 5)
+                            tracks.forEach((track) => {
+                                tracksURIs.push(track.uri);
+                            })
                         })
+                        return tracksURIs;
                     })
-                    return tracksURIs;
-                })
-                .then((data)=>{
-                    console.log(data.length);
-                    const optionsForAddingTracks = {
-                        method: "POST",
-                        headers: {
-                            'Authorization': 'Bearer ' + current_token,
-                            'Content-Type': 'application/json'
-                        },
-                        url: `https://api.spotify.com/v1/playlists/${info.pl_id}/tracks`,
-                        data: {
-                            uris: (data.length > 50)? data.slice(1,51) : data
-                        }
-                    };
-                    axios(optionsForAddingTracks)
-                        .then((response) => {
-                            console.log(response.data);
-                            res.json(info);
-                        })
-                        .catch((err) => {
-                            console.log(err);
-                            console.log("artits Tracks could not be added");
-                        })
+                    .then((data) => {
+                        console.log(data.length);
+                        const optionsForAddingTracks = {
+                            method: "POST",
+                            headers: {
+                                'Authorization': 'Bearer ' + current_token,
+                                'Content-Type': 'application/json'
+                            },
+                            url: `https://api.spotify.com/v1/playlists/${info.pl_id}/tracks`,
+                            data: {
+                                uris: (data.length > 50) ? data.slice(1, 51) : data
+                            }
+                        };
+                        axios(optionsForAddingTracks)
+                            .then((response) => {
+                                console.log(response.data);
+                                res.json(info);
+                            })
+                            .catch((err) => {
+                                console.log("ERROR: Artits Tracks could not be added");
+                            })
 
-                })
-                .catch((err)=>{
-                    console.log("Top tracks failed");
-                })
+                    })
+                    .catch((err) => {
+                        console.log("ERROR: Top tracks of Artist failed to fetch");
+                    })
             })
             .catch((err) => {
-                console.log(err);
-                console.log("Play error for top artits playlist");
+                console.log("ERROR: Playlist error for top artits");
             })
     } else {
-        console.log("Error: token not generated");
+        console.log("ERROR: Calling api before token generation");
     }
 })
+
+
+
 
 //api to create playlist(empty)
 app.post("/createplaylist/:user_id/:playlist_name", (req, res) => {
     if (current_token) {
-        const {user_id,playlist_name} = req.params;
-        const trackURIs = req.body.map((track)=>{
+        const { user_id, playlist_name } = req.params;
+        const trackURIs = req.body.map((track) => {
             return track.uri;
         });
         const optionsForPlaylistCreation = {
             method: "POST",
-            headers: { 
-                'Authorization': 'Bearer ' + current_token ,
+            headers: {
+                'Authorization': 'Bearer ' + current_token,
                 'Content-Type': 'application/json'
             },
             url: `https://api.spotify.com/v1/users/${user_id}/playlists`,
@@ -332,44 +344,42 @@ app.post("/createplaylist/:user_id/:playlist_name", (req, res) => {
             }
         };
         axios(optionsForPlaylistCreation)
-        .then((response) => {
-            const data = response.data;
-            const info = {
-                pl_id: data.id,
-                pl_url: data.external_urls.spotify
-            }
-            console.log("PLAYLIST CREATED");
-            const optionsForAddingTracks = {
-                method: "POST",
-                headers: {
-                    'Authorization': 'Bearer ' + current_token,
-                    'Content-Type': 'application/json'
-                },
-                url: `https://api.spotify.com/v1/playlists/${info.pl_id}/tracks`,
-                data: {
-                    uris: trackURIs
+            .then((response) => {
+                const data = response.data;
+                const info = {
+                    pl_id: data.id,
+                    pl_url: data.external_urls.spotify
                 }
-            }
-            axios(optionsForAddingTracks)
-            .then((response)=>{
-                console.log(response.data);
-                res.json(info);
+                console.log("PLAYLIST CREATED");
+                const optionsForAddingTracks = {
+                    method: "POST",
+                    headers: {
+                        'Authorization': 'Bearer ' + current_token,
+                        'Content-Type': 'application/json'
+                    },
+                    url: `https://api.spotify.com/v1/playlists/${info.pl_id}/tracks`,
+                    data: {
+                        uris: trackURIs
+                    }
+                }
+                axios(optionsForAddingTracks)
+                    .then((response) => {
+                        console.log(response.data);
+                        res.json(info);
+                    })
+                    .catch((err) => {
+                        console.log("ERROR: Top Tracks could not be added");
+                    })
+
             })
-            .catch((err)=>{
-                console.log(err);
-                console.log("Tracks could not be added");
+            .catch((err) => {
+                console.log("ERROR: Playlist error ");
             })
-            
-        })
-        .catch((err) => {
-            console.log("Play error");
-        })
     } else {
-        console.log("Error: token not generated");
+        console.log("ERROR: Calling api before token generation");
     }
 
 });
 
 
-
-app.listen(PORT,()=>console.log("Server is running..."));
+app.listen(PORT, () => console.log("Server is running..."));
