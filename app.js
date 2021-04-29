@@ -171,6 +171,7 @@ app.get("/artists", (req, res) => {
                     imgUrl: item.images[1],
                     information: item.genres,
                     name: item.name,
+                    id: item.id
                 };
                 return artistdata;
             });
@@ -224,6 +225,93 @@ app.get("/history",(req,res)=>{
     }
 
 });
+
+//api to get playlist of top tracks by user's top artists
+app.post("/createplaylist/:user_id/Top%20Artists",(req,res)=>{
+    if (current_token) {
+        const user_id = req.params.user_id;
+        const artistIDs = req.body.map((artist)=>{
+            return artist.id;
+        });
+        const optionsForPlaylistCreation = {
+            method: "POST",
+            headers: {
+                'Authorization': 'Bearer ' + current_token,
+                'Content-Type': 'application/json'
+            },
+            url: `https://api.spotify.com/v1/users/${user_id}/playlists`,
+            data: {
+                name: "Top Artists"
+            }
+        };
+        axios(optionsForPlaylistCreation)
+            .then((response) => {
+                const data = response.data;
+                const info = {
+                    pl_id: data.id,
+                    pl_url: data.external_urls.spotify
+                }
+                console.log("PLAYLIST CREATED");
+                // const tracksURIs = [];
+                // console.log(artistIDs);
+                const requests = artistIDs.map((id)=>{
+                    const option = {
+                        method: "GET",
+                        headers: {
+                            'Authorization': 'Bearer ' + current_token,
+                        },
+                        url:`https://api.spotify.com/v1/artists/${id}/top-tracks?${querystring.stringify({ market: "IN" })}`
+                    }
+                    return axios(option);
+                });
+                // console.log(requests);
+                axios.all(requests)
+                .then((responses)=>{
+                    const tracksURIs = [];
+                    responses.forEach((response)=>{
+                        const tracks = response.data.tracks.slice(1,5)
+                        tracks.forEach((track)=>{
+                            tracksURIs.push(track.uri);
+                        })
+                    })
+                    return tracksURIs;
+                })
+                .then((data)=>{
+                    console.log(data.length);
+                    const optionsForAddingTracks = {
+                        method: "POST",
+                        headers: {
+                            'Authorization': 'Bearer ' + current_token,
+                            'Content-Type': 'application/json'
+                        },
+                        url: `https://api.spotify.com/v1/playlists/${info.pl_id}/tracks`,
+                        data: {
+                            uris: (data.length > 50)? data.slice(1,51) : data
+                        }
+                    };
+                    axios(optionsForAddingTracks)
+                        .then((response) => {
+                            console.log(response.data);
+                            res.json(info);
+                        })
+                        .catch((err) => {
+                            console.log(err);
+                            console.log("artits Tracks could not be added");
+                        })
+
+                })
+                .catch((err)=>{
+                    console.log("Top tracks failed");
+                })
+            })
+            .catch((err) => {
+                console.log(err);
+                console.log("Play error for top artits playlist");
+            })
+    } else {
+        console.log("Error: token not generated");
+    }
+})
 
 //api to create playlist(empty)
 app.post("/createplaylist/:user_id/:playlist_name", (req, res) => {
