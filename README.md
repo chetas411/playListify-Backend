@@ -12,10 +12,12 @@ git clone https://github.com/chetas411/playListify-Backend.git
 cd playlistify-Backend
 npm install
 ```
-*2. Run auth_url_script.js file for generating the auth url to be used in frontend*
+*2. Create .env file  by following the .env.example file and add all the credential values obtained from Spotify*
+
+*3. Run auth_url_script.js file for generating the auth url to be used in frontend*
 ```
 node auth_url_script
 ```
-*3. Create .env file  by following the .env.example file and add all the credential values obtained from Spotify*
+
 
 *4. Now run the server by `npm start`*
